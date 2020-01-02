@@ -1,21 +1,16 @@
-#토큰값
-#NjU3NTYwODI5Nzc2MTAxMzk5.XfzBGQ.EBEh0jPTCtkW-rUCqO9mzKseNqU
+
 
 #내 계정(댕댕이) id == 169596780579782658
 '''
 TODO 대신 전해드립니다봇
 
 '''
-
+import os
 import asyncio
 import discord
 from discord.utils import get
 
 client = discord.Client()
-
-#봇의 토큰값
-token = "NjU3NTYwODI5Nzc2MTAxMzk5.XfzBGQ.EBEh0jPTCtkW-rUCqO9mzKseNqU"
-
 
 #전역변수선언
 adminID = "169596780579782658" #내 계정 id
@@ -245,5 +240,5 @@ async def on_message(message):
                 await client.send_file(destination=channelID, fp="UhWah.png")
                 return
         ###########################################################################################
-
-client.run(token)
+access_token = os.environ["BOT_TOKEN"]
+client.run(access_token)
