@@ -1,17 +1,14 @@
-
-
 #내 계정(댕댕이) id == 169596780579782658
 '''
 TODO 대신 전해드립니다봇
 
 '''
-import os
+
 import asyncio
 import discord
 from discord.utils import get
 
 client = discord.Client()
-
 #전역변수선언
 adminID = "169596780579782658" #내 계정 id
 generalID = "None" #제네럴 ID를 입력받으세요
@@ -203,8 +200,10 @@ async def on_message(message):
                             print(chatLogList[i].name)
                     await client.send_message(channelID, "밴 겁니다 수고링 옥토링 잉클링~")
                 except Exception as e:
-                    print(e)
-                    await client.send_message(channelID, "ERRORcode : indexError")
+                    dmUser = await client.get_user_info(adminID)
+                    await client.send_message(dmUser, e.__str__())
+                    await client.send_message(dmUser, "chatlog list 수 = %d\n밴 거려는 채팅%s"%(len(chatLogList), searchText))
+
             else :
                 await client.send_message(channelID, "권한이 없습니다.")
             return
