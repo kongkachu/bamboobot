@@ -1,3 +1,5 @@
-True
-대나무숲-chamber
-661797881723748403
+generalName=대나무숲-chamber
+generalID=661797881723748403
+messageRangeWarning=300
+messageLimitMinute=5
+messageLimitCount=5
