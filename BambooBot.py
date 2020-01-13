@@ -21,6 +21,8 @@ async def on_ready():
 # 봇이 새로운 메시지를 수신했을때 동작
 @client.event
 async def on_message(message):
+    userID = message.author.id  #id == 메세지를 보낸사람의 ID (str 35890358)
+    channelID = message.channel
     if message.author.bot: #봇체크 = 봇이 메세지를 보낸 경우 무시함
         return None
     if message.content == "(뉴비에오 콘)" or message.content == "뉴비에오~와우" :
