@@ -19,18 +19,18 @@ chatLimitUsers=[]
 
 setup = None #bambooBot setup을 받기위한 전역변수
 class BotSetup:
-    def __init__(self, generalID, generalName, messageLimitMinute=10, messageLimitCount=5, messageRangeWarning=300):
+    def __init__(self, generalID, generalName, messageLimitMinute=10, messageLimitCount=5, messageRangeWarning=300,banTimeHour=1):
         self.generalID = generalID
         self.generalName = generalName
         self.messageRangeWarning = messageRangeWarning
         self.messageLimitMinute = messageLimitMinute
         self.messageLimitCount = messageLimitCount
+        self.banTimeHour = banTimeHour
         #(messageLimitMinute)분 이내로 (messageLimitCount)개 초과의 메세지를 보낼 수 없다
 class BanUser :
     def __init__(self, id):
         self.id = id
         self.banTime = int(time.time())
-        self.banChatCount = 50
 class chatLog :
     def __init__(self, id, name, chat) :
         self.id = id
@@ -66,6 +66,7 @@ def fileInput() :
         f.write("messageRangeWarning=%d\n" % (setup.messageRangeWarning))
         f.write("messageLimitMinute=%d\n" % (setup.messageLimitMinute))
         f.write("messageLimitCount=%d\n" % (setup.messageLimitCount))
+        f.write("banTimeHour=%d\n" % (setup.banTimeHour))
 #startSetUp
 @client.event
 async def on_ready():
@@ -90,6 +91,7 @@ async def on_ready():
             messageRangeWarning=               
             messageLimitMinute=
             messageLimitCount=
+            banTimeHour=
             
             '''
             if readedSetup[2] == "" :
@@ -104,16 +106,22 @@ async def on_ready():
                 readedSetup[4] = "5"
             readedSetup[4] = int(readedSetup[4]) # messageLimitCount
 
+            if readedSetup[5] == "" :
+                readedSetup[5] = "1"
+            readedSetup[5] = int(readedSetup[5]) # messageLimitCount
+
             set_generalName = readedSetup[0]
             set_generalID = readedSetup[1]
             set_messageRangeWarning = readedSetup[2]
             set_messageLimitMinute = readedSetup[3]
             set_messageLimitCount = readedSetup[4]
+            set_banTimeHour = readedSetup[5]
             setup = BotSetup(generalID=set_generalID,
                              generalName=set_generalName,
                              messageRangeWarning=set_messageRangeWarning,
                              messageLimitMinute=set_messageLimitMinute,
-                             messageLimitCount=set_messageLimitCount)
+                             messageLimitCount=set_messageLimitCount,
+                             banTimeHour=set_banTimeHour)
         isGeneralInput = True
     except Exception as e :
         print(e)
@@ -151,15 +159,15 @@ async def on_message(message):
                     for i in range(len(chatLogList)) :
                         if searchText in chatLogList[i].chat or searchText in chatLogList[i].id or \
                                 searchText in chatLogList[i].name:
-                            await client.send_message(channelID, "User = %s // ID = %s"%(
+                            await client.send_message(channelID, "User = %s\nID = %s"%(
                             chatLogList[i].name,chatLogList[i].id))
                             await client.send_message(channelID, chatLogList[i].chat)
                     return
                 if message.content.startswith("k!show"): #TODO log 갯수 받아서 출력하는 메소드
                     try :
                         showCount = int(message.content[7:])
-                        for i in range(showCount) :
-                            await client.send_message(channelID, "User = %s // ID = %s" % (
+                        for i in range(len(chatLogList)-showCount,len(chatLogList),1) :
+                            await client.send_message(channelID, "User = %s\nID = %s" % (
                                 chatLogList[i].name, chatLogList[i].id))
                             await client.send_message(channelID, chatLogList[i].chat)
                     except Exception as e:
@@ -170,6 +178,7 @@ async def on_message(message):
                                                          "generalID = %s\n"
                                                          "글자수 경고 = %s자\n"
                                                          "메세지 제한 = %d분 내로 %d개까지\n" #TODO 분인지 초인지 확실히 할 것
+                                                         "메세지 벤 시간 = %d시간\n"
                                                          "현 사용자 수 = %d\n"
                                                          "" %(
                                                               setup.generalName,
@@ -177,6 +186,7 @@ async def on_message(message):
                                                               setup.messageRangeWarning,
                                                               setup.messageLimitMinute,
                                                               setup.messageLimitCount,
+                                                              setup.banTimeHour,
                                                               len(chatLogList),
                                                               ))
                     return
@@ -192,19 +202,26 @@ async def on_message(message):
                     await client.send_message(channelID, "커맨드는 여기서 동작할 수 없습니다.")
                     return
             if isUtilOnline :
+                #ban 관리
+                banDelList = []
                 for i in range(len(banList)):
                     if userID == banList[i].id:
-                        await client.send_message(channelID, "귀하는 일정시간 유동계정 사용이 불가능합니다.")
-                        return
+                        if (banList[i].banTime + (setup.banTimeHour * 3600)) > int(time.time()) :
+                            banDelList.append(i)
+                        else :
+                            await client.send_message(channelID, "귀하는 일정시간 유동계정 사용이 불가능합니다.")
+                            return
+                try :
+                    for i in banDelList:
+                        del banList[i]
+                except IndexError as e :
+                    pass
+                ###################################
                 user = await client.get_user_info(userID)
                 userName = user.name
                 if len(chatLogList) > logSize : #선언부 명시 : 디폴트 200줄까지
                     while len(chatLogList) > logSize :
                         del chatLogList[0]
-                for i in range(len(banList)):
-                    banList[i].banChatCount -= 1
-                    if banList[i].banChatCount < 0:
-                        del banList[i]
                 if message.content.startswith("http") :
                     await client.send_message(channelID, "http링크는 송신할 수 없습니다.")
                     return
@@ -332,11 +349,18 @@ async def on_message(message):
                     findText = False
                     for i in range(len(chatLogList) - 1, -1, -1) :
                         if searchText in chatLogList[i].chat :
-                            banList.append(BanUser(id=chatLogList[i].id))
-                            print(chatLogList[i].name)
+                            dmUser = await client.get_user_info(adminID)
                             findText = True
+                            if chatLogList[i].id == adminID :
+                                await client.send_message(dmUser, "누군가 당신에게 밴을 시도합니다." %userID)
+                            else :
+                                banList.append(BanUser(id=chatLogList[i].id))
+                                print(chatLogList[i].name)
+                                await client.send_message(dmUser, "ban user = %s" %chatLogList[i].id)
+                                await client.send_message(dmUser, chatLogList[i].chat)
                     if findText :
                         await client.send_message(channelID, "밴 겁니다 수고링 옥토링 잉클링~")
+                        await client.send_message(dmUser, "tring user = %s" %userID)
                     else :
                         await client.send_message(channelID, "해당 채팅 내용을 찾지 못했습니다.")
                 except Exception as e:
@@ -378,6 +402,18 @@ async def on_message(message):
             return
         if message.content == "(우워우 콘)" or message.content == "우워우...":
             await client.send_file(destination=channelID, fp="UhWah.png")
+            return
+        if message.content == "즐겁다":
+            await client.send_file(destination=channelID, fp="Tanoshi.png")
+            return
+        if message.content == "골-든 즐겁다" :
+            await client.send_file(destination=channelID, fp="Golden_Tanoshi.png")
+            return
+        if message.content == "안녕하다":
+            await client.send_file(destination=channelID, fp="Hi.png")
+            return
+        if message.content == "받아치다":
+            await client.send_file(destination=channelID, fp="ReturnHi.png")
             return
         ###########################################################################################
         #TODO elo rating 모듈 추가하기
