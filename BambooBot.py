@@ -5,7 +5,7 @@ import os
 
 client = discord.Client()
 #전역변수선언
-adminID = "169596780579782658" #내 계정 id
+adminID = "" #내 계정 id
 
 
 @client.event
